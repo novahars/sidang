@@ -1,0 +1,7 @@
+services:
+  indicomm-3d-compro:
+    build: .
+    container_name: indicomm-3d-compro
+    ports:
+      - "8020:80"
+    restart: unless-stopped
