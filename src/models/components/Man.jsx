@@ -1,91 +1,83 @@
 import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useAnimations } from '@react-three/drei';
-import { CharakterControll } from '../../CharakterControll';
-import ThirdPersonCamera from '../../Thirdpersoncamera.jsx';
-import * as THREE from 'three'; // Add THREE import
+import { useAnimations, useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
+import islandScene from "../../assets/YANGINI.glb";
 
-export default function Man({ nodes, materials, camera, animations }) {
+export const Man = ({ position, scale }) => {
     const group = useRef();
+    const { nodes, materials, animations } = useGLTF(islandScene);
     const { actions, mixer } = useAnimations(animations, group);
-    const [characterControls, setCharacterControls] = useState(null);
-    const [keysPressed, setKeysPressed] = useState({});
+    const [animation, setAnimation] = useState('idle');
 
+    // Debug animations
+    useEffect(() => {
+        console.log('Available animations:', animations);
+        console.log('Available actions:', actions);
+
+        // Setup animations map
+        if (mixer) {
+            // Start with idle animation
+            if (actions.idle) {
+                actions.idle.play();
+            }
+        }
+    }, [animations, actions, mixer]);
+
+    // Handle animation transitions
+    useEffect(() => {
+        if (!actions) return;
+
+        // Fade out all current animations
+        Object.values(actions).forEach(action => {
+            if (action.isRunning()) {
+                action.fadeOut(0.2);
+            }
+        });
+
+        // Fade in the new animation
+        if (actions[animation]) {
+            actions[animation].reset().fadeIn(0.2).play();
+        }
+    }, [actions, animation]);
+
+    // Animation control with keyboard
     useFrame((state, delta) => {
         mixer?.update(delta);
-        if (characterControls) {
-            characterControls.update(delta, keysPressed);
+
+        const { forward, backward, left, right, shift, space } = state.controls?.getKeys?.() || {};
+
+        // Update animation state based on input
+        if (forward || backward || left || right) {
+            if (shift) {
+                setAnimation('run');
+            } else {
+                setAnimation('walk');
+            }
+        } else if (space) {
+            setAnimation('jump');
+        } else {
+            setAnimation('idle');
         }
     });
 
-    useEffect(() => {
-        if (group.current && actions && camera?.controls && camera?.instance) {
-            const animationsMap = new Map();
-
-            Object.entries(actions).forEach(([name, action]) => {
-                if (name === 'Idle' || name === 'Walk' ||
-                    name === 'Run' || name === 'jumping') {
-                    console.log(`Mapping animation: ${name}`);
-                    animationsMap.set(name === 'jumping' ? 'Jump' : name, action);
-
-                    // Set proper animation settings
-                    action.clampWhenFinished = false;
-                    action.loop = THREE.LoopRepeat;
-                    if (name === 'jumping') {
-                        action.loop = THREE.LoopOnce;
-                        action.clampWhenFinished = true;
-                    }
-                }
-            });
-
-            if (animationsMap.size > 0) {
-                const controls = new CharakterControll(
-                    group.current,
-                    mixer,
-                    animationsMap,
-                    camera.controls,
-                    camera.instance,
-                    'Idle'
-                );
-                setCharacterControls(controls);
-
-                // Start with Idle animation
-                const idleAction = animationsMap.get('Idle');
-                if (idleAction) {
-                    idleAction.play();
-                }
-            }
-        }
-
-        const handleKeyDown = (e) => {
-            setKeysPressed(keys => ({ ...keys, [e.key.toLowerCase()]: true }));
-            if (e.code === 'Space') characterControls?.jump();
-            if (e.key === 'Shift') characterControls?.switchRunToggle();
-        };
-
-        const handleKeyUp = (e) => {
-            setKeysPressed(keys => ({ ...keys, [e.key.toLowerCase()]: false }));
-            if (e.key === 'Shift') characterControls?.switchRunToggle();
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
-
-        return () => { // Fixed typo here (removed 'n')
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
-        };
-    }, [actions, mixer, camera, animations]); // Added characterControls dependency
-
 
     return (
-        <group ref={group}>
-            <group name="Armature" rotation={[Math.PI / 2, 0, 0]} scale={0.03}>
+        <group ref={group} position={position} scale={scale}>
+            <group
+                name="Character"
+                rotation={[Math.PI / 2, 0, 0]}
+                position={[0, 0, 0]}
+            >
+                <primitive object={nodes.mixamorigHips} /> {/* Armature/Skeleton root */}
+
                 <skinnedMesh
                     name="Ch13_Body"
                     geometry={nodes.Ch13_Body.geometry}
                     material={materials['Ch13_body.001']}
                     skeleton={nodes.Ch13_Body.skeleton}
+                    morphTargetDictionary={nodes.Ch13_Body.morphTargetDictionary}
+                    morphTargetInfluences={nodes.Ch13_Body.morphTargetInfluences}
                 />
                 <skinnedMesh
                     name="Ch13_Eyeleashes"
@@ -117,11 +109,12 @@ export default function Man({ nodes, materials, camera, animations }) {
                     material={materials['Ch13_body.001']}
                     skeleton={nodes.Ch13_Shoe.skeleton}
                 />
-                <primitive object={nodes.mixamorigHips} />
-                <ThirdPersonCamera target={group} />
-
+                {nodes?.mixamorigHips && (
+                    <primitive object={nodes.mixamorigHips} />
+                )}
             </group>
-
         </group>
     );
 }
+
+useGLTF.preload(islandScene);

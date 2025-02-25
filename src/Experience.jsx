@@ -1,111 +1,83 @@
-import { Sparkles, Stars } from "@react-three/drei";
-import { Island } from "./models/Island";
-import Sky from "./models/Sky";
-import { useEffect, useState, useRef } from "react";
-import { gsap } from "gsap";
-import { useThree } from "@react-three/fiber";
-import * as THREE from 'three';
+import { KeyboardControls } from '@react-three/drei'
+import { Canvas } from '@react-three/fiber'
+import { useRef, useState } from 'react'
+import { CharacterController } from './components/CharacterController'
+import { ThirdPersonCamera } from './components/ThirdPersonCamera'
+import { Map } from './components/Map'
+import { Man } from './models/components/Man'  // Make sure this matches the export
 
-export default function Experience({ startZoom, loadingComplete, cameraTransitionDone }) {
-  const { camera } = useThree();
-  const [isMobile, setIsMobile] = useState(false);
-  const cameraTransitionComplete = useRef(false);
-
-  const checkIsMobile = () => {
-    setIsMobile(window.innerWidth <= 768);
-  };
-
-  // Handle initial camera position and transition
-  useEffect(() => {
-    if (loadingComplete && !cameraTransitionComplete.current) {
-      cameraTransitionComplete.current = true;
-
-      // Create a timeline for sequential animations
-      const tl = gsap.timeline({
-        onComplete: () => {
-          console.log("Camera transition complete");
-        }
-      });
-
-      // First movement: Zoom in closer to the island
-      tl.to(camera.position, {
-        x: 0,
-        y: 50,
-        z: 100,
-        duration: 2,
-        ease: "power2.inOut"
-      });
-
-      // Second movement: Circle around to back of character
-      tl.to(camera.position, {
-        x: 0,
-        y: 10,
-        z: 20,
-        duration: 1.5,
-        ease: "power1.inOut"
-      });
-
-      // Final movement: Move to third-person position
-      tl.to(camera.position, {
-        x: 0,
-        y: 2,
-        z: 5,
-        duration: 1,
-        ease: "power3.inOut"
-      });
-
-      // Update camera target during transition
-      gsap.to(camera.rotation, {
-        x: 0,
-        y: 0,
-        z: 0,
-        duration: 4.5, // Match total timeline duration
-        ease: "power2.inOut",
-        onUpdate: () => {
-          camera.lookAt(new THREE.Vector3(0, 1, 0));
-        }
-      });
-    }
-  }, [camera, loadingComplete]);
-
-  // Mobile responsiveness
-  useEffect(() => {
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-    return () => window.removeEventListener("resize", checkIsMobile);
-  }, []);
-
-  const islandPosition = isMobile ? [-10, -7, -10] : [0, 0, 0];
-  const islandScale = isMobile ? [0.2, 0.2, 0.2] : [0.3, 0.3, 0.3];
-  const showThirdPerson = cameraTransitionDone;
+export function Experience() {
+  const characterRef = useRef()
+  const [viewMode, setViewMode] = useState('third')
 
   return (
     <>
-      <Island
-        position={islandPosition}
-        scale={islandScale}
-        loadingComplete={loadingComplete}
-      />
-      {showThirdPerson && <ThirdPersonCamera />}
-
-      <Sky />
-      <Stars
-        radius={100}
-        depth={30}
-        count={3000}
-        factor={3}
-        saturation={0}
-        fade
-        speed={1000}
-      />
-      {!isMobile && (
-        <Sparkles
-          size={50}
-          scale={[500, 500, 500]}
-          speed={5}
-          count={1000}
-        />
-      )}
+      {/* Camera Controls UI */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        zIndex: 100,
+        display: 'flex',
+        gap: '10px'
+      }}>
+        <button
+          onClick={() => setViewMode('third')}
+          style={{
+            padding: '8px 16px',
+            background: viewMode === 'third' ? '#4CAF50' : '#fff',
+            border: '2px solid #4CAF50',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Third Person
+        </button>
+        <button
+          onClick={() => setViewMode('aerial')}
+          style={{
+            padding: '8px 16px',
+            background: viewMode === 'aerial' ? '#4CAF50' : '#fff',
+            border: '2px solid #4CAF50',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Aerial View
+        </button>
+        <button
+          onClick={() => setViewMode('orbit')}
+          style={{
+            padding: '8px 16px',
+            background: viewMode === 'orbit' ? '#4CAF50' : '#fff',
+            border: '2px solid #4CAF50',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Orbit View
+        </button>
+      </div>
+      <KeyboardControls
+        map={[
+          { name: 'forward', keys: ['ArrowUp', 'w', 'W'] },
+          { name: 'backward', keys: ['ArrowDown', 's', 'S'] },
+          { name: 'left', keys: ['ArrowLeft', 'a', 'A'] },
+          { name: 'right', keys: ['ArrowRight', 'd', 'D'] },
+          { name: 'shift', keys: ['ShiftLeft', 'ShiftRight'] },
+          { name: 'space', keys: ['Space'] }
+        ]}
+      >
+        <Canvas shadows camera={{ fov: 45, position: [0, 2, 8] }}>
+          <ThirdPersonCamera target={characterRef} viewMode={viewMode} />
+          <CharacterController ref={characterRef}>
+            <Man position={[0, 1, 0]} scale={0.01} /> {/* Adjusted position and scale */}
+          </CharacterController>
+          <Map />
+          <ambientLight intensity={0.5} />
+          <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
+        </Canvas>
+      </KeyboardControls>
     </>
-  );
+  )
 }

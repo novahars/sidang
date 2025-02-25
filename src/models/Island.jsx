@@ -19,7 +19,7 @@ export function Island({ loadingComplete, ...props }) {
   const controls = useRef();
   const { camera } = useThree();
 
-  // Load GLTF model
+  // Load GLTF model  
   const { nodes, materials, animations } = useGLTF(islandScene);
 
   // Mobile detection
