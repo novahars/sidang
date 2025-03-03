@@ -7,60 +7,62 @@ import islandScene from "../../assets/YANGINI.glb";
 export const Man = ({ position, scale }) => {
     const group = useRef();
     const { nodes, materials, animations } = useGLTF(islandScene);
-    const { actions, mixer } = useAnimations(animations, group);
-    const [animation, setAnimation] = useState('idle');
+    const { actions, mixer, names } = useAnimations(animations, group);
+    const [currentAnimation, setCurrentAnimation] = useState('idle');
+    const [animationsMap] = useState(new Map());
 
-    // Debug animations
+    // Initialize animations
     useEffect(() => {
-        console.log('Available animations:', animations);
-        console.log('Available actions:', actions);
+        console.log('Available animations:', names);
 
-        // Setup animations map
-        if (mixer) {
-            // Start with idle animation
-            if (actions.idle) {
-                actions.idle.play();
-            }
-        }
-    }, [animations, actions, mixer]);
-
-    // Handle animation transitions
-    useEffect(() => {
-        if (!actions) return;
-
-        // Fade out all current animations
-        Object.values(actions).forEach(action => {
-            if (action.isRunning()) {
-                action.fadeOut(0.2);
+        // Map animations to their proper names
+        names.forEach((name) => {
+            const action = actions[name];
+            if (name.toLowerCase().includes('idle')) {
+                animationsMap.set('idle', action);
+            } else if (name.toLowerCase().includes('walk')) {
+                animationsMap.set('walk', action);
+            } else if (name.toLowerCase().includes('run')) {
+                animationsMap.set('run', action);
+            } else if (name.toLowerCase().includes('jump')) {
+                animationsMap.set('jump', action);
             }
         });
 
-        // Fade in the new animation
-        if (actions[animation]) {
-            actions[animation].reset().fadeIn(0.2).play();
+        // Start with idle animation
+        const idleAction = animationsMap.get('idle');
+        if (idleAction) {
+            idleAction.play();
+            setCurrentAnimation('idle');
         }
-    }, [actions, animation]);
+    }, [actions, names, animationsMap]);
 
-    // Animation control with keyboard
+    // Handle animation transitions
+    useEffect(() => {
+        const currentAction = animationsMap.get(currentAnimation);
+        if (!currentAction) return;
+
+        // Stop all current animations
+        animationsMap.forEach(action => {
+            action.fadeOut(0.2);
+        });
+
+        // Play new animation
+        currentAction.reset().fadeIn(0.2).play();
+
+        // Set loop mode for jump animation
+        if (currentAnimation === 'jump') {
+            currentAction.setLoop(THREE.LoopOnce);
+            currentAction.clampWhenFinished = true;
+        } else {
+            currentAction.setLoop(THREE.LoopRepeat);
+        }
+    }, [currentAnimation, animationsMap]);
+
+    // Update animations
     useFrame((state, delta) => {
         mixer?.update(delta);
-
-        const { forward, backward, left, right, shift, space } = state.controls?.getKeys?.() || {};
-
-        // Update animation state based on input
-        if (forward || backward || left || right) {
-            if (shift) {
-                setAnimation('run');
-            } else {
-                setAnimation('walk');
-            }
-        } else if (space) {
-            setAnimation('jump');
-        } else {
-            setAnimation('idle');
-        }
     });
-
 
     return (
         <group ref={group} position={position} scale={scale}>
@@ -69,7 +71,7 @@ export const Man = ({ position, scale }) => {
                 rotation={[Math.PI / 2, 0, 0]}
                 position={[0, 0, 0]}
             >
-                <primitive object={nodes.mixamorigHips} /> {/* Armature/Skeleton root */}
+                <primitive object={nodes.mixamorigHips} />
 
                 <skinnedMesh
                     name="Ch13_Body"

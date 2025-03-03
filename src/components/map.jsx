@@ -14,7 +14,7 @@ export function Map({ loadingComplete, ...props }) {
     const group = useRef()
     const { nodes, materials } = useGLTF(islandScene)
     const [isMobile, setIsMobile] = useState(false)
-    
+
     // Mobile detection
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth <= 768)
@@ -27,7 +27,7 @@ export function Map({ loadingComplete, ...props }) {
 
     // Animation spring
     const { positionY, rotation } = useSpring({
-        positionY: isMobile ? (start ? -7 : 120) : (start ? 0 : 120),
+        positionY: isMobile ? (start ? -7 : 10) : (start ? 0 : 10),
         rotation: start ? [0, 0, 0] : [0, Math.PI / 8, 0],
         config: { tension: 20, friction: 20 },
         onRest: () => setStart(true),
@@ -47,13 +47,15 @@ export function Map({ loadingComplete, ...props }) {
             dispose={null}
             position-y={positionY}
             rotation={rotation}
+            scale={0.02} // Add scale here to make the map smaller
+
         >
             <Float speed={0} rotationIntensity={0} floatIntensity={0}>
                 <Storeblue nodes={nodes} materials={materials} />
                 <CircleK nodes={nodes} materials={materials} />
                 <Store nodes={nodes} materials={materials} />
                 <Office nodes={nodes} materials={materials} />
-                
+
                 <Road nodes={nodes} materials={materials} />
             </Float>
         </animated.group>

@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { CharacterController } from './components/CharacterController'
 import { ThirdPersonCamera } from './components/ThirdPersonCamera'
 import { Map } from './components/Map'
-import { Man } from './models/components/Man'  // Make sure this matches the export
+import { Man } from './models/components/Man'
 
 export function Experience() {
   const characterRef = useRef()
@@ -71,7 +71,7 @@ export function Experience() {
         <Canvas shadows camera={{ fov: 45, position: [0, 2, 8] }}>
           <ThirdPersonCamera target={characterRef} viewMode={viewMode} />
           <CharacterController ref={characterRef}>
-            <Man position={[0, 1, 0]} scale={0.01} /> {/* Adjusted position and scale */}
+            <Man position={[0, 7.7, 7]} scale={0.01} /> {/* Adjusted position and scale */}
           </CharacterController>
           <Map />
           <ambientLight intensity={0.5} />
